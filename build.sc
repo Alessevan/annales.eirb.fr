@@ -9,6 +9,8 @@ object main extends ScalaModule with ScalafmtModule {
   override def ivyDeps = Agg(
     ivy"io.github.iltotore::iron::2.6.0",
     ivy"com.lihaoyi::cask:0.9.5",
-    ivy"com.lihaoyi::requests:0.9.0"
+    ivy"com.lihaoyi::requests:0.9.0",
+    ivy"com.lihaoyi::scalatags:0.13.1",
+    ivy"com.typesafe.play::twirl-api:1.6.8",
   )
 }

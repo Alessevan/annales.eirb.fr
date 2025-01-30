@@ -26,6 +26,18 @@ def toFilePath(path: String): Either[String, FilePath] =
     filePath: FilePath <- path.refineEither[FilePathRegEx]
   yield filePath
 
-type CAS = String :| Match["^[a-z]+[0-9]*$"]
+type CasRegEx =
+  DescribedAs[
+    Match[
+      "^[a-z]+[0-9]*$"
+    ],
+    "A CAS must only be alphabetic characters followed by numbers."
+  ]
+type CAS = String :| CasRegEx
+
+def toCAS(login: String): Either[String, CAS] =
+  for
+    cas: CAS <- login.refineEither[CasRegEx]
+  yield cas
 
 type Hash = String :| Match["^([a-f0-9][a-f0-9])+$"]
