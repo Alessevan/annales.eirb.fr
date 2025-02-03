@@ -4,10 +4,10 @@ import castor.Context
 import cask.{Abort, Cookie, Logger, RawDecorator, Redirect, Request, Response, Routes, get}
 import cask.model.Response.Raw
 import cask.router.Result
+import fr.alessevan.annales.renderer.{html, rendererToResponse, body, script}
 import fr.alessevan.annales.toCAS
 import fr.alessevan.annales.users.User
 import fr.alessevan.annales.users.User.Normal
-import io.github.iltotore.iron.autoRefine
 
 import java.net.{URLDecoder, URLEncoder}
 import java.time.{Duration, Instant}
@@ -17,6 +17,15 @@ import java.util.UUID
 private var sessionIds: Map[String, (User, Instant)] = Map.empty
 private val expirationDelay: TemporalAmount = Duration.ofHours(1)
 
+private def filter(sessionIds: Map[String, (User, Instant)], user: User, now: Instant): Map[String, (User, Instant)] =
+  sessionIds.filter((_, other) => other._1.equals(user) && other._2.plus(expirationDelay).isAfter(now))
+
+private def filterNot(sessionIds: Map[String, (User, Instant)], user: User, now: Instant): Map[String, (User, Instant)] =
+  sessionIds.filterNot((_, other) => other._1.equals(user) || other._2.plus(expirationDelay).isBefore(now))
+
+private def filterTime(sessionIds: Map[String, (User, Instant)], now: Instant): Map[String, (User, Instant)] =
+  sessionIds.filter((_, other) => other._2.plus(expirationDelay).isAfter(now))
+
 /**
  * Get the user from the session cookie.
  * @param request The request to get the cookie from.
@@ -24,8 +33,10 @@ private val expirationDelay: TemporalAmount = Duration.ofHours(1)
  */
 private def getSessionCookieUser(request: Request): Option[User] =
   request.cookies.get("session") match
-    case Some(session) => sessionIds.get(session.value).map(opt => opt._1)
-    case None          => None
+    case Some(session) => filterTime(sessionIds, Instant.now()).get(session.value) match
+        case Some((user, time)) if time.plus(expirationDelay).isAfter(Instant.now()) => Some(user)
+        case _                                                                       => None
+    case None => None
 
 /**
  * Decorator to log the user in the session if their not already connected.
@@ -88,12 +99,12 @@ case class AuthenticationRoutes()(implicit cc: Context, log: Logger) extends Rou
             val session = UUID.randomUUID().toString
             val user = Normal(login)
             val now = Instant.now()
-            sessionIds = sessionIds.filterNot((_, other) =>
-              other._1.equals(user) || other._2.plus(expirationDelay).isBefore(now)
-            ) + (session -> (user, now))
+            sessionIds = filterNot(sessionIds, user, now) + (session -> (user, now))
             println(s"Authenticated as $cas")
-            Response("OK", cookies = Seq(Cookie("session", s"$session")))
-            // TODO : redirect
+            rendererToResponse(
+              html(body = body(script(s"window.location = '$redirectDecoded';"))),
+              cookies = Seq(Cookie("session", s"$session", expires = now.plus(expirationDelay), path = "/"))
+            )
           case _ =>
             println("Authentication failed.")
             Response("KO", 401)
@@ -110,7 +121,7 @@ case class AuthenticationRoutes()(implicit cc: Context, log: Logger) extends Rou
   @isLogged
   @get("/api/auth/logout")
   def authLogout(request: Request)(user: User): Response[String] =
-    sessionIds = sessionIds.filterNot((_, other) => other.equals(user))
+    sessionIds = filterNot(sessionIds, user, Instant.now())
     Response("OK", cookies = Seq(Cookie("session", "", expires = Instant.EPOCH)))
 
   initialize()
