@@ -7,12 +7,15 @@ import cask.router.Result
 import fr.alessevan.annales.toCAS
 import fr.alessevan.annales.users.User
 import fr.alessevan.annales.users.User.Normal
+import io.github.iltotore.iron.autoRefine
 
 import java.net.{URLDecoder, URLEncoder}
-import java.time.Instant
+import java.time.{Duration, Instant}
+import java.time.temporal.TemporalAmount
 import java.util.UUID
 
-private var sessionIds: Map[String, User] = Map.empty
+private var sessionIds: Map[String, (User, Instant)] = Map.empty
+private val expirationDelay: TemporalAmount = Duration.ofHours(1)
 
 /**
  * Get the user from the session cookie.
@@ -21,7 +24,7 @@ private var sessionIds: Map[String, User] = Map.empty
  */
 private def getSessionCookieUser(request: Request): Option[User] =
   request.cookies.get("session") match
-    case Some(session) => sessionIds.get(session.value)
+    case Some(session) => sessionIds.get(session.value).map(opt => opt._1)
     case None          => None
 
 /**
@@ -84,7 +87,10 @@ case class AuthenticationRoutes()(implicit cc: Context, log: Logger) extends Rou
           case Right(login) =>
             val session = UUID.randomUUID().toString
             val user = Normal(login)
-            sessionIds = sessionIds.filterNot((_, other) => other.equals(user)) + (session -> user)
+            val now = Instant.now()
+            sessionIds = sessionIds.filterNot((_, other) =>
+              other._1.equals(user) || other._2.plus(expirationDelay).isBefore(now)
+            ) + (session -> (user, now))
             println(s"Authenticated as $cas")
             Response("OK", cookies = Seq(Cookie("session", s"$session")))
             // TODO : redirect
