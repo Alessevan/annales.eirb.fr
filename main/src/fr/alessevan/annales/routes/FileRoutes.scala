@@ -40,6 +40,7 @@ case class FileRoutes()(implicit cc: Context, log: Logger) extends Routes:
       case file: File.FileAccepted => Redirect(s"/static/${file.hash}")
       case _                       => Redirect("/static/404.html")
 
+  @logUser
   @staticResources("/static/:file")
   def getStaticFile(file: String): String =
     s"/files/$file"
