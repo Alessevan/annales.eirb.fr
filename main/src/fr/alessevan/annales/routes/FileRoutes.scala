@@ -23,19 +23,15 @@ private abstract class getFileDecorator extends RawDecorator:
           case Left(error) => Result.Success(Response(error))
       case Left(error) => Result.Success(Response(error))
 
-private class getRootFile extends getFileDecorator:
+private class fromFolder(folder: Folder) extends getFileDecorator:
 
   override def wrapFunction(ctx: Request, delegate: Delegate): Result[Raw] =
-    super.getResult(rootFiles, ctx, delegate)
-
-private class getRequestFile extends getFileDecorator:
-
-  override def wrapFunction(ctx: Request, delegate: Delegate): Result[Raw] =
-    super.getResult(requestFiles, ctx, delegate)
+    super.getResult(folder, ctx, delegate)
 
 case class FileRoutes()(implicit cc: Context, log: Logger) extends Routes:
 
-  @getRootFile
+  @logUser
+  @fromFolder(rootFiles)
   @get("/files")
   def getResourceFile()(file: File) =
     file match
@@ -43,5 +39,9 @@ case class FileRoutes()(implicit cc: Context, log: Logger) extends Routes:
         Response("")
       case file: File.FileAccepted => Redirect(s"/static/${file.hash}")
       case _                       => Redirect("/static/404.html")
+
+  @staticResources("/static/:file")
+  def getStaticFile(file: String): String =
+    s"/files/$file"
 
   initialize()
