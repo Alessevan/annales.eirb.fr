@@ -15,11 +15,13 @@ case class empty() extends raw("")
 case class html(header: header = header(empty()), body: body = body(empty()))
     extends raw(s"<!DOCTYPE html><html lang=\"fr\">${header.render()}${body.render()}</html>")
 
-case class header(elements: HtmlRenderer*) extends raw(s"<head>${elements.map(_.render()).concat("")}</head>")
+case class header(elements: HtmlRenderer*) extends raw(s"<head>${elements.map(_.render()).mkString("")}</head>")
 
-case class body(elements: HtmlRenderer*) extends raw(s"<body>${elements.map(_.render()).concat("")}</body>")
+case class body(elements: HtmlRenderer*) extends raw(s"<body>${elements.map(_.render()).mkString("")}</body>")
 
 case class script(js: String) extends raw(s"<script>$js</script>")
+
+case class p(paragraph: String) extends raw(s"$paragraph")
 
 def rendererToResponse(htmlRenderer: HtmlRenderer, headers: Seq[(String, String)] = Seq(), cookies: Seq[Cookie] = Seq()): Response[String] =
   Response(

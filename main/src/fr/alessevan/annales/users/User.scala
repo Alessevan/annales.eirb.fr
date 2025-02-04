@@ -11,5 +11,5 @@ enum User:
 
   override def equals(that: Any): Boolean =
     that match
-      case normal: Normal => name.eq(normal.name)
+      case normal: Normal => name.equals(normal.name)
       case _              => false
