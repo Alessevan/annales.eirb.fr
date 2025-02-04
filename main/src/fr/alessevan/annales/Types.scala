@@ -40,4 +40,16 @@ def toCAS(login: String): Either[String, CAS] =
     cas: CAS <- login.refineEither[CasRegEx]
   yield cas
 
-type Hash = String :| Match["^([a-f0-9][a-f0-9])+$"]
+type HashRegEx =
+  DescribedAs[
+    Match[
+      "^([a-f0-9][a-f0-9])+$"
+    ],
+    "A Hash must only be bytes represented in hexadecimal."
+  ]
+type Hash = String :| HashRegEx
+
+def toHash(str: String): Either[String, Hash] =
+  for
+    hash: Hash <- str.refineEither[HashRegEx]
+  yield hash

@@ -9,7 +9,7 @@ enum File:
 
   def name: FileName
 
-  case Folder(name: FileName, subfiles: List[File]) extends File
+  case Folder(name: FileName, subfiles: Seq[File]) extends File
   case FileRequest(name: FileName, hash: Hash, owner: CAS, time: LocalDateTime) extends File
   case FileAccepted(name: FileName, hash: Hash, owner: CAS, time: LocalDateTime, acceptedBy: CAS, acceptedTime: LocalDateTime) extends File
 
